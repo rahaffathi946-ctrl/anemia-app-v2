@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AnemiaAI – فحص ذكي لفقر الدم</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+<!-- ضعي مفتاح Anthropic API هنا (للاختبار المحلي فقط) -->
+<script>window.ANTHROPIC_API_KEY = '';</script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --primary: #2563EB;
+    --primary-dark: #1D4ED8;
+    --primary-light: #EFF6FF;
+    --primary-mid: #BFDBFE;
+    --danger: #DC2626;
+    --danger-light: #FEF2F2;
+    --success: #16A34A;
+    --success-light: #F0FDF4;
+    --warning: #D97706;
+    --warning-light: #FFFBEB;
+    --gray-50: #F8FAFC;
+    --gray-100: #F1F5F9;
+    --gray-200: #E2E8F0;
+    --gray-400: #94A3B8;
+    --gray-600: #475569;
+    --gray-700: #334155;
+    --gray-900: #0F172A;
+    --white: #FFFFFF;
+    --radius: 12px;
+    --radius-lg: 20px;
+    --shadow: 0 4px 24px rgba(37,99,235,0.08);
+    --shadow-card: 0 2px 12px rgba(0,0,0,0.06);
+  }
+
+  body {
+    font-family: 'Cairo', sans-serif;
+    background: var(--white);
+    color: var(--gray-900);
+    direction: rtl;
+    font-size: 16px;
+    line-height: 1.7;
+  }
+
+  /* ── NAV ── */
+  nav {
+    background: var(--white);
+    border-bottom: 1px solid var(--gray-200);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    padding: 0 5%;
+  }
+  .nav-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+    gap: 16px;
+  }
+  .nav-logo {
+    font-size: 22px;
+    font-weight: 900;
+    color: var(--primary);
+    letter-spacing: -0.5px;
+    text-decoration: none;
+  }
+  .nav-logo span { color: var(--gray-900); }
+  .nav-links {
+    display: flex;
+    gap: 28px;
+    list-style: none;
+  }
+  .nav-links a {
+    text-decoration: none;
+    color: var(--gray-600);
+    font-size: 15px;
+    font-weight: 600;
+    transition: color 0.2s;
+  }
+  .nav-links a:hover { color: var(--primary); }
+  .nav-cta {
+    background: var(--primary);
+    color: var(--white) !important;
+    padding: 8px 20px;
+    border-radius: var(--radius);
+    font-weight: 700 !important;
+    transition: background 0.2s !important;
+  }
+  .nav-cta:hover { background: var(--primary-dark) !important; color: var(--white) !important; }
+
+  /* ── HERO ── */
+  .hero {
+    background: linear-gradient(160deg, #EFF6FF 0%, #F8FAFC 60%, #FFFFFF 100%);
+    padding: 80px 5% 60px;
+    text-align: center;
+  }
+  .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--primary-mid);
+    color: var(--primary-dark);
+    padding: 6px 16px;
+    border-radius: 100px;
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 24px;
+  }
+  .hero-badge::before { content: "✦"; font-size: 10px; }
+  .hero h1 {
+    font-size: clamp(32px, 5vw, 52px);
+    font-weight: 900;
+    line-height: 1.25;
+    color: var(--gray-900);
+    margin-bottom: 20px;
+    letter-spacing: -1px;
+  }
+  .hero h1 em {
+    font-style: normal;
+    color: var(--primary);
+  }
+  .hero p {
+    font-size: 18px;
+    color: var(--gray-600);
+    max-width: 580px;
+    margin: 0 auto 36px;
+    line-height: 1.8;
+  }
+  .hero-actions { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+  .btn-primary {
+    background: var(--primary);
+    color: var(--white);
+    border: none;
+    padding: 14px 32px;
+    border-radius: var(--radius);
+    font-size: 16px;
+    font-weight: 700;
+    font-family: 'Cairo', sans-serif;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.15s;
+    text-decoration: none;
+    display: inline-block;
+  }
+  .btn-primary:hover { background: var(--primary-dark); transform: translateY(-1px); }
+  .btn-outline {
+    background: transparent;
+    color: var(--primary);
+    border: 2px solid var(--primary-mid);
+    padding: 14px 32px;
+    border-radius: var(--radius);
+    font-size: 16px;
+    font-weight: 700;
+    font-family: 'Cairo', sans-serif;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    text-decoration: none;
+    display: inline-block;
+  }
+  .btn-outline:hover { border-color: var(--primary); background: var(--primary-light); }
+
+  /* ── FEATURES ── */
+  .features {
+    padding: 64px 5%;
+    background: var(--white);
+  }
+  .section-label {
+    text-align: center;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--primary);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .section-title {
+    text-align: center;
+    font-size: clamp(24px, 3.5vw, 36px);
+    font-weight: 900;
+    color: var(--gray-900);
+    margin-bottom: 48px;
+    letter-spacing: -0.5px;
+  }
+  .features-grid {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 24px;
+  }
+  .feature-card {
+    background: var(--gray-50);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-lg);
+    padding: 28px 24px;
+    text-align: center;
+    transition: box-shadow 0.2s, transform 0.2s;
+  }
+  .feature-card:hover { box-shadow: var(--shadow); transform: translateY(-3px); }
+  .feature-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    background: var(--primary-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 16px;
+    font-size: 24px;
+  }
+  .feature-card h3 { font-size: 17px; font-weight: 700; color: var(--gray-900); margin-bottom: 8px; }
+  .feature-card p { font-size: 14px; color: var(--gray-600); line-height: 1.7; }
+
+  /* ── HOW IT WORKS ── */
+  .how {
+    background: var(--primary-light);
+    padding: 64px 5%;
+  }
+  .steps-grid {
+    max-width: 900px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 32px;
+  }
+  .step {
+    text-align: center;
+    position: relative;
+  }
+  .step-num {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: var(--primary);
+    color: var(--white);
+    font-size: 22px;
+    font-weight: 900;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 16px;
+    box-shadow: 0 4px 14px rgba(37,99,235,0.3);
+  }
+  .step h3 { font-size: 16px; font-weight: 700; color: var(--gray-900); margin-bottom: 8px; }
+  .step p { font-size: 14px; color: var(--gray-600); line-height: 1.7; }
+
+  /* ── CHECKER SECTION ── */
+  .checker-section {
+    padding: 64px 5%;
+    background: var(--white);
+    scroll-margin-top: 80px;
+  }
+  .checker-wrap {
+    max-width: 720px;
+    margin: 0 auto;
+    background: var(--white);
+    border: 1.5px solid var(--gray-200);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .checker-header {
+    background: var(--primary);
+    padding: 24px 28px;
+    text-align: center;
+  }
+  .checker-header h2 { font-size: 22px; font-weight: 900; color: var(--white); }
+  .checker-header p { font-size: 14px; color: rgba(255,255,255,0.8); margin-top: 4px; }
+  .checker-body { padding: 32px 28px; }
+
+  .gender-row {
+    display: flex;
+    gap: 14px;
+    margin-bottom: 28px;
+  }
+  .gender-btn {
+    flex: 1;
+    padding: 14px;
+    border: 2px solid var(--gray-200);
+    border-radius: var(--radius);
+    background: var(--white);
+    font-family: 'Cairo', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--gray-600);
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .gender-btn:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
+  .gender-btn.active { border-color: var(--primary); background: var(--primary); color: var(--white); }
+
+  .fields-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+    margin-bottom: 24px;
+  }
+  .field-group { display: flex; flex-direction: column; gap: 6px; }
+  .field-group label {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--gray-700);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .field-hint {
+    font-size: 11px;
+    color: var(--primary);
+    font-weight: 600;
+  }
+  .field-group input {
+    padding: 12px 14px;
+    border: 1.5px solid var(--gray-200);
+    border-radius: var(--radius);
+    font-size: 16px;
+    font-family: 'Cairo', sans-serif;
+    font-weight: 600;
+    color: var(--gray-900);
+    direction: ltr;
+    text-align: center;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    background: var(--white);
+    width: 100%;
+  }
+  .field-group input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+  }
+  .field-group input::placeholder { color: var(--gray-400); font-weight: 400; }
+
+  .analyze-btn {
+    width: 100%;
+    padding: 16px;
+    background: var(--primary);
+    color: var(--white);
+    border: none;
+    border-radius: var(--radius);
+    font-size: 18px;
+    font-weight: 900;
+    font-family: 'Cairo', sans-serif;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.15s;
+    margin-top: 4px;
+  }
+  .analyze-btn:hover { background: var(--primary-dark); transform: translateY(-1px); }
+  .analyze-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+  /* ── RESULT ── */
+  .result-box {
+    margin-top: 28px;
+    border-radius: var(--radius);
+    border: 2px solid var(--gray-200);
+    overflow: hidden;
+    display: none;
+  }
+  .result-header {
+    padding: 20px 24px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .result-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    flex-shrink: 0;
+  }
+  .result-title { font-size: 20px; font-weight: 900; }
+  .result-sub { font-size: 14px; font-weight: 600; margin-top: 2px; }
+  .result-body { padding: 20px 24px; border-top: 1px solid var(--gray-200); }
+
+  .result-box.anemic .result-header { background: var(--danger-light); }
+  .result-box.anemic { border-color: #FECACA; }
+  .result-box.anemic .result-icon { background: #FEE2E2; }
+  .result-box.anemic .result-title { color: var(--danger); }
+  .result-box.anemic .result-sub { color: #EF4444; }
+
+  .result-box.healthy .result-header { background: var(--success-light); }
+  .result-box.healthy { border-color: #BBF7D0; }
+  .result-box.healthy .result-icon { background: #DCFCE7; }
+  .result-box.healthy .result-title { color: var(--success); }
+  .result-box.healthy .result-sub { color: #22C55E; }
+
+  .metrics-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .metric-chip {
+    background: var(--gray-50);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    text-align: center;
+  }
+  .metric-chip .m-label { font-size: 11px; color: var(--gray-400); font-weight: 700; letter-spacing: 0.5px; }
+  .metric-chip .m-val { font-size: 20px; font-weight: 900; color: var(--gray-900); }
+  .metric-chip .m-status {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 100px;
+    display: inline-block;
+    margin-top: 4px;
+  }
+  .m-low { background: var(--danger-light); color: var(--danger); }
+  .m-high { background: var(--warning-light); color: var(--warning); }
+  .m-normal { background: var(--success-light); color: var(--success); }
+
+  .advice-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 16px;
+  }
+  .advice-item {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    background: var(--gray-50);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    font-size: 13px;
+    color: var(--gray-700);
+    font-weight: 600;
+  }
+  .advice-item span { font-size: 18px; }
+
+  .disclaimer-bar {
+    background: var(--warning-light);
+    border: 1px solid #FDE68A;
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    font-size: 12px;
+    color: var(--warning);
+    font-weight: 700;
+    text-align: center;
+    margin-top: 20px;
+    line-height: 1.6;
+  }
+
+  /* ── AI INSIGHT ── */
+  .ai-insight {
+    margin-top: 16px;
+    background: var(--primary-light);
+    border: 1px solid var(--primary-mid);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    display: none;
+  }
+  .ai-insight-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--primary-dark);
+    margin-bottom: 10px;
+  }
+  .ai-insight-body {
+    font-size: 14px;
+    color: var(--gray-700);
+    line-height: 1.8;
+  }
+  .ai-loading { font-size: 14px; color: var(--primary); font-weight: 600; animation: pulse 1.2s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { opacity:1 } 50% { opacity:0.4 } }
+
+  /* ── FOOTER ── */
+  footer {
+    background: var(--gray-900);
+    color: rgba(255,255,255,0.6);
+    padding: 40px 5% 24px;
+    text-align: center;
+  }
+  .footer-logo { font-size: 24px; font-weight: 900; color: #fff; margin-bottom: 8px; }
+  .footer-logo span { color: var(--primary-mid); }
+  footer p { font-size: 13px; margin-bottom: 20px; }
+  .footer-links { display: flex; justify-content: center; gap: 24px; flex-wrap: wrap; margin-bottom: 20px; }
+  .footer-links a { color: rgba(255,255,255,0.5); text-decoration: none; font-size: 13px; font-weight: 600; transition: color 0.2s; }
+  .footer-links a:hover { color: #fff; }
+  .footer-copy { font-size: 12px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px; }
+
+  /* ── LOADER OVERLAY ── */
+  #loader {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(15,23,42,0.5);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+  }
+  #loader.show { display: flex; }
+  .loader-box {
+    background: var(--white);
+    border-radius: var(--radius-lg);
+    padding: 36px 48px;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+  }
+  .spinner {
+    width: 44px; height: 44px;
+    border: 4px solid var(--primary-mid);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 16px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loader-box p { font-size: 16px; font-weight: 700; color: var(--gray-700); }
+  .loader-box small { font-size: 13px; color: var(--gray-400); }
+
+  @media (max-width: 600px) {
+    .fields-grid { grid-template-columns: 1fr; }
+    .advice-grid { grid-template-columns: 1fr; }
+    .nav-links { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-inner">
+    <a href="#" class="nav-logo">Anemia<span>AI</span></a>
+    <ul class="nav-links">
+      <li><a href="#">الرئيسية</a></li>
+      <li><a href="#how">كيف يعمل؟</a></li>
+      <li><a href="#checker" class="nav-cta">ابدأ الفحص</a></li>
+    </ul>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-badge">مدعوم بالذكاء الاصطناعي</div>
+  <h1>أنيميا <em>AI</em><br>فحص ذكي لفقر الدم</h1>
+  <p>افحص احتمال إصابتك بفقر الدم في ثوانٍ باستخدام الذكاء الاصطناعي — أداة سهلة ومجانية تساعدك على فهم نتائج تحليل دمك (CBC) بشكل مبسط.</p>
+  <div class="hero-actions">
+    <a href="#checker" class="btn-primary">ابدأ الفحص الآن ←</a>
+    <a href="#how" class="btn-outline">كيف يعمل؟</a>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features">
+  <p class="section-label">لماذا نحن؟</p>
+  <h2 class="section-title">كل ما تحتاجه في مكان واحد</h2>
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="feature-icon">⚡</div>
+      <h3>سريع جداً</h3>
+      <p>نتيجة فورية في ثوانٍ بمجرد إدخال قيم الفحص.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🎯</div>
+      <h3>دقة ذكية</h3>
+      <p>يعتمد على نموذج ذكاء اصطناعي مدرّب على بيانات CBC حقيقية.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">✅</div>
+      <h3>سهل الاستخدام</h3>
+      <p>فقط انقل الأرقام من ورقة فحصك وستحصل على التحليل فوراً.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🎁</div>
+      <h3>مجاني تماماً</h3>
+      <p>لا تسجيل، لا رسوم. تحليل مجاني ومتاح للجميع دائماً.</p>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="how" id="how">
+  <p class="section-label">الخطوات</p>
+  <h2 class="section-title">كيف يعمل التطبيق؟</h2>
+  <div class="steps-grid">
+    <div class="step">
+      <div class="step-num">١</div>
+      <h3>أدخل بيانات تحليلك</h3>
+      <p>ببساطة قم بنقل الأرقام من ورقة فحص الدم (CBC) الخاصة بك إلى التطبيق.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">٢</div>
+      <h3>اضغط فحص</h3>
+      <p>سيقوم محرك الذكاء الاصطناعي بتحليل النسب فوراً وبدقة عالية.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">٣</div>
+      <h3>احصل على النتيجة</h3>
+      <p>ستحصل على تقرير سهل الفهم يوضح احتمال إصابتك بالأنيميا مع نصائح مفيدة.</p>
+    </div>
+  </div>
+</section>
+
+<!-- CHECKER -->
+<section class="checker-section" id="checker">
+  <p class="section-label">الفحص</p>
+  <h2 class="section-title">إدخال بيانات الفحص</h2>
+
+  <div class="checker-wrap">
+    <div class="checker-header">
+      <h2>نموذج فحص سريع CBC</h2>
+      <p>يرجى كتابة الأرقام كما هي موجودة في ورقة تحليل الدم</p>
+    </div>
+    <div class="checker-body">
+
+      <!-- Gender -->
+      <div class="gender-row">
+        <button class="gender-btn active" id="btn-male" onclick="selectGender('male')">♂ ذكر</button>
+        <button class="gender-btn" id="btn-female" onclick="selectGender('female')">♀ أنثى</button>
+      </div>
+
+      <!-- Inputs -->
+      <div class="fields-grid">
+        <div class="field-group">
+          <label>نسبة الهيموجلوبين <span class="field-hint">ابحث عن Hb</span></label>
+          <input type="number" id="hb" placeholder="مثال: 13.5" step="0.1" min="0" max="25">
+        </div>
+        <div class="field-group">
+          <label>حجم كرات الدم <span class="field-hint">ابحث عن MCV</span></label>
+          <input type="number" id="mcv" placeholder="مثال: 85" step="0.1" min="0" max="200">
+        </div>
+        <div class="field-group">
+          <label>معدل الهيموجلوبين <span class="field-hint">ابحث عن MCH</span></label>
+          <input type="number" id="mch" placeholder="مثال: 28" step="0.1" min="0" max="60">
+        </div>
+        <div class="field-group">
+          <label>تركيز الهيموجلوبين <span class="field-hint">ابحث عن MCHC</span></label>
+          <input type="number" id="mchc" placeholder="مثال: 33" step="0.1" min="0" max="50">
+        </div>
+      </div>
+
+      <button class="analyze-btn" id="analyzeBtn" onclick="runAnalysis()">
+        حلل النتائج الآن ←
+      </button>
+
+      <!-- Result -->
+      <div class="result-box" id="resultBox">
+        <div class="result-header">
+          <div class="result-icon" id="resultIcon"></div>
+          <div>
+            <div class="result-title" id="resultTitle"></div>
+            <div class="result-sub" id="resultSub"></div>
+          </div>
+        </div>
+        <div class="result-body">
+          <div class="metrics-row" id="metricsRow"></div>
+
+          <!-- AI Insight -->
+          <div class="ai-insight" id="aiInsight">
+            <div class="ai-insight-header">🤖 تحليل الذكاء الاصطناعي</div>
+            <div class="ai-insight-body" id="aiBody"><span class="ai-loading">جارٍ تحليل بياناتك...</span></div>
+          </div>
+
+          <!-- Advice -->
+          <div id="adviceSection"></div>
+
+          <div class="disclaimer-bar">
+            ⚠️ هذا التطبيق أداة استرشادية ولا يغني عن استشارة الطبيب المختص.<br>
+            يرجى تأكيد النتائج عبر الفحوصات الطبية الرسمية.
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">Anemia<span>AI</span></div>
+  <p>أداة ذكية لفهم نتائج فحص دمك بسهولة ومجانية تماماً.</p>
+  <div class="footer-links">
+    <a href="#">الرئيسية</a>
+    <a href="#checker">فحص</a>
+    <a href="#how">كيف يعمل؟</a>
+    <a href="#">اتصل بنا</a>
+    <a href="#">الشروط والأحكام</a>
+  </div>
+  <div class="footer-copy">© 2026 AnemiaAI. جميع الحقوق محفوظة.</div>
+</footer>
+
+<!-- LOADER -->
+<div id="loader">
+  <div class="loader-box">
+    <div class="spinner"></div>
+    <p>جارٍ التحليل...</p>
+    <small>يرجى الانتظار</small>
+  </div>
+</div>
+
+<script>
+let selectedGender = 'male';
+
+function selectGender(g) {
+  selectedGender = g;
+  document.getElementById('btn-male').classList.toggle('active', g === 'male');
+  document.getElementById('btn-female').classList.toggle('active', g === 'female');
+}
+
+// ── WHO thresholds (for metric chips only) ──
+const thresholds = {
+  hb:   { male: { low: 13.0, high: 18.0 }, female: { low: 12.0, high: 16.0 } },
+  mcv:  { low: 80, high: 100 },
+  mch:  { low: 27, high: 33 },
+  mchc: { low: 32, high: 36 }
+};
+
+function getStatus(field, val, gender) {
+  const t = field === 'hb' ? thresholds.hb[gender] : thresholds[field];
+  if (val < t.low) return 'low';
+  if (val > t.high) return 'high';
+  return 'normal';
+}
+function statusLabel(s) {
+  return s === 'low' ? 'منخفض' : s === 'high' ? 'مرتفع' : 'طبيعي';
+}
+
+// ── Call Flask /predict (uses model.pkl) ──
+async function fetchPrediction(hb, mcv, mch, mchc, gender) {
+  const res = await fetch('/predict', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ gender, hb, mcv, mch, mchc })
+  });
+  if (!res.ok) throw new Error('server error');
+  return await res.json();  // { anemic, probability, status }
+}
+
+// ── نطاقات القيم الطبية المنطقية ──
+const medicalRanges = {
+  hb:   { min: 3,  max: 25,  name: 'الهيموجلوبين (Hb)',  unit: 'g/dL' },
+  mcv:  { min: 40, max: 130, name: 'حجم الكرية (MCV)',    unit: 'fL'   },
+  mch:  { min: 10, max: 50,  name: 'متوسط هيموجلوبين الكرية (MCH)',  unit: 'pg'   },
+  mchc: { min: 20, max: 42,  name: 'تركيز هيموجلوبين الكرية (MCHC)', unit: 'g/dL' }
+};
+
+function validateMedicalValues(hb, mcv, mch, mchc) {
+  const vals = { hb, mcv, mch, mchc };
+  for (const [key, val] of Object.entries(vals)) {
+    const r = medicalRanges[key];
+    if (val < r.min || val > r.max) {
+      return `⚠️ القيمة المُدخلة لـ ${r.name} (${val} ${r.unit}) خارج النطاق الطبي المنطقي.\nالنطاق المقبول: ${r.min} – ${r.max} ${r.unit}\nيرجى التحقق من القيمة وإعادة الإدخال.`;
+    }
+  }
+  return null;
+}
+
+// ── Call Claude API directly from browser ──
+async function fetchAIInsight(hb, mcv, mch, mchc, gender, isAnemic, probability) {
+  const gender_ar  = gender === 'male' ? 'ذكر' : 'أنثى';
+  const result_ar  = isAnemic ? 'مصاب بفقر الدم' : 'غير مصاب بفقر الدم';
+  const prob_text  = isAnemic
+    ? `ونسبة الاحتمالية التي أعطاها النموذج هي ${probability}%`
+    : `ونسبة الاحتمالية للإصابة التي أعطاها النموذج هي ${probability}% فقط`;
+
+  const prompt =
+    `أنت مساعد طبي متخصص. بناءً على نتائج فحص CBC التالية لمريض ${gender_ar}:\n` +
+    `- الهيموجلوبين (Hb): ${hb} g/dL\n` +
+    `- حجم الكرية (MCV): ${mcv} fL\n` +
+    `- متوسط هيموجلوبين الكرية (MCH): ${mch} pg\n` +
+    `- تركيز هيموجلوبين الكرية (MCHC): ${mchc} g/dL\n\n` +
+    `التشخيص المبدئي للنموذج: ${result_ar}، ${prob_text}.\n\n` +
+    `اكتب تحليلاً موجزاً (3-4 جمل فقط) يشرح هذه النتائج بلغة عربية بسيطة مفهومة لغير المختصين. اذكر:\n` +
+    `1. ما تشير إليه القيم\n` +
+    `2. نصيحة عملية واحدة\n` +
+    `3. تأكيد بضرورة مراجعة الطبيب\n\n` +
+    `لا تستخدم تنسيق نقاط أو أرقام — اكتب فقرة واحدة متسلسلة.`;
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': window.ANTHROPIC_API_KEY || '',
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1000,
+      messages: [{ role: 'user', content: prompt }]
+    })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || 'API error');
+  }
+  const data = await res.json();
+  return data.content?.map(b => b.text || '').join('') || '';
+}
+
+async function runAnalysis() {
+  const hb   = parseFloat(document.getElementById('hb').value);
+  const mcv  = parseFloat(document.getElementById('mcv').value);
+  const mch  = parseFloat(document.getElementById('mch').value);
+  const mchc = parseFloat(document.getElementById('mchc').value);
+
+  if ([hb, mcv, mch, mchc].some(isNaN)) {
+    alert('يرجى إدخال جميع القيم الأربعة قبل التحليل.');
+    return;
+  }
+
+  // التحقق من النطاق الطبي
+  const validationError = validateMedicalValues(hb, mcv, mch, mchc);
+  if (validationError) {
+    alert(validationError);
+    return;
+  }
+
+  document.getElementById('loader').classList.add('show');
+  document.getElementById('analyzeBtn').disabled = true;
+  document.getElementById('resultBox').style.display = 'none';
+  document.getElementById('aiInsight').style.display = 'none';
+
+  let isAnemic, probability;
+  try {
+    const pred = await fetchPrediction(hb, mcv, mch, mchc, selectedGender);
+    isAnemic    = pred.anemic;
+    probability = pred.probability;
+  } catch (e) {
+    document.getElementById('loader').classList.remove('show');
+    document.getElementById('analyzeBtn').disabled = false;
+    alert('خطأ في الاتصال بالخادم. يرجى المحاولة مجدداً.');
+    return;
+  }
+
+  // Show result
+  const box = document.getElementById('resultBox');
+  box.className = 'result-box ' + (isAnemic ? 'anemic' : 'healthy');
+  document.getElementById('resultIcon').textContent = isAnemic ? '⚠️' : '✅';
+  document.getElementById('resultTitle').textContent = isAnemic
+    ? `هناك احتمال للإصابة بفقر الدم (الأنيميا) — ${probability}%`
+    : 'لا يوجد احتمال للإصابة بفقر الدم';
+  document.getElementById('resultSub').textContent = isAnemic
+    ? 'يُنصح بمراجعة الطبيب للتأكيد'
+    : 'نتائجك تبدو جيدة وضمن المعدلات الطبيعية';
+
+  // Metrics
+  const fields = [
+    { key: 'hb', label: 'Hb', val: hb, unit: 'g/dL' },
+    { key: 'mcv', label: 'MCV', val: mcv, unit: 'fL' },
+    { key: 'mch', label: 'MCH', val: mch, unit: 'pg' },
+    { key: 'mchc', label: 'MCHC', val: mchc, unit: 'g/dL' }
+  ];
+  const mr = document.getElementById('metricsRow');
+  mr.innerHTML = fields.map(f => {
+    const s = getStatus(f.key, f.val, selectedGender);
+    return `<div class="metric-chip">
+      <div class="m-label">${f.label}</div>
+      <div class="m-val">${f.val}</div>
+      <div class="m-status m-${s}">${statusLabel(s)}</div>
+    </div>`;
+  }).join('');
+
+  // Advice
+  const adviceSection = document.getElementById('adviceSection');
+  if (isAnemic) {
+    adviceSection.innerHTML = `
+    <h4 style="font-size:15px;font-weight:800;color:var(--gray-700);margin:16px 0 12px">الخطوات القادمة والنصائح</h4>
+    <div class="advice-grid">
+      <div class="advice-item"><span>👨‍⚕️</span><div>حدد موعداً مع طبيبك للتأكيد وإجراء الفحوصات اللازمة</div></div>
+      <div class="advice-item"><span>🥬</span><div>تناول الأطعمة الغنية بالحديد كالسبانخ واللحوم الحمراء</div></div>
+      <div class="advice-item"><span>💤</span><div>احرص على النوم الكافي لتقليل الشعور بالتعب والإرهاق</div></div>
+      <div class="advice-item"><span>💧</span><div>اشرب كميات كافية من الماء يومياً</div></div>
+    </div>`;
+  } else {
+    adviceSection.innerHTML = `
+    <h4 style="font-size:15px;font-weight:800;color:var(--gray-700);margin:16px 0 12px">نصائح للحفاظ على صحتك</h4>
+    <div class="advice-grid">
+      <div class="advice-item"><span>🥗</span><div>استمر في تناول الغذاء المتوازن الغني بالحديد والفيتامينات</div></div>
+      <div class="advice-item"><span>🏃</span><div>مارس النشاط البدني بانتظام لتعزيز مستويات الطاقة</div></div>
+      <div class="advice-item"><span>💧</span><div>احرص على شرب كميات كافية من الماء يومياً</div></div>
+      <div class="advice-item"><span>🩺</span><div>الفحص الدوري يساعد في الاكتشاف المبكر والحفاظ على الصحة</div></div>
+    </div>`;
+  }
+
+  box.style.display = 'block';
+  document.getElementById('loader').classList.remove('show');
+  document.getElementById('analyzeBtn').disabled = false;
+  box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+  // AI Insight (via Flask proxy)
+  const aiDiv = document.getElementById('aiInsight');
+  aiDiv.style.display = 'block';
+  document.getElementById('aiBody').innerHTML = '<span class="ai-loading">جارٍ تحليل بياناتك بالذكاء الاصطناعي...</span>';
+
+  try {
+    const insight = await fetchAIInsight(hb, mcv, mch, mchc, selectedGender, isAnemic, probability);
+    document.getElementById('aiBody').textContent = insight;
+  } catch (e) {
+    document.getElementById('aiBody').textContent = 'تعذّر جلب التحليل. تأكد من إعداد مفتاح API.';
+    console.error('AI insight error:', e);
+  }
+}
+</script>
+</body>
+</html>
